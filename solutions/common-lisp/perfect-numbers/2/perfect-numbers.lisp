@@ -1,0 +1,66 @@
+(defpackage :perfect-numbers
+  (:use :cl)
+  (:export :classify))
+
+(in-package :perfect-numbers)
+
+(defun get-aliquot-sum (n)
+  (let ((aliquot-sum 1) (x 2) (max-x (floor (sqrt n))) (q 0) (ok t))
+    ;(format t "~A~%" max-x)
+    (if (eql n 2) (setq aliquot-sum 1)
+      (loop while ok
+         do (if (integerp (/ n x)) 
+                (progn (setq q (/ n x)) 
+                  (setq aliquot-sum (+ aliquot-sum (+ x q))) 
+                  ;(format t "x: ~A  q: ~A (x+q): ~A~%" x q (+ x q))))
+                ))
+         do (setq x (+ x 1))
+         do (if (> x max-x) (setq ok nil))
+         finally       (if (eql (expt (floor (sqrt n)) 2) n) (setq aliquot-sum (- aliquot-sum (sqrt n))))
+        )
+      )
+    aliquot-sum
+    ))
+
+(defun get-low-factors (n m acc)
+   (cond ((null m) (get-low-factors n (nth-value 0 (floor (sqrt n))) acc))
+     ((= m 1) (reverse (append acc (list 1))))
+     ((integerp (/ n m)) (let ((nl (append acc (list m)))) 
+                              (get-low-factors n (- m 1) nl)))
+     (T (get-low-factors n (- m 1) acc))))
+
+(defun get-high-factors(n acc hiacc)
+  (cond ((null acc) hiacc)
+        (T (get-high-factors n (cdr acc) (append hiacc (list (/ n (car acc))))))))
+
+(defun get-all-factors (n)
+  (let ((lf 0) (hf 0))
+    (setq lf (get-low-factors n nil nil))
+    (setq hf (get-high-factors n (cdr lf) nil))
+    (cond ((= (length lf) 1) lf)
+          ((= (car (last lf)) (car hf)) lf)
+          (t (append lf (reverse hf))))
+   ))
+
+(defun classify_old (number)
+  (let ((factors 0))
+  (cond ((< number 1) nil)
+        ((= number 1) "deficient")
+        (t (setq factors (get-all-factors number))
+           (cond
+             ((= (length factors) 1) "deficient")
+             ((= (reduce #'+ factors) number) "perfect")
+             ((> (reduce #'+ factors) number) "abundant")
+             ((< (reduce #'+ factors) number) "deficient")
+            (t (list 'unknown' factors)))))))
+
+(defun classify (number)
+  (cond ((< number 1) nil)
+        ((= number 1) "deficient")
+        (t (let ((sumv (get-aliquot-sum number)))
+             (cond
+               ((null sumv) nil)
+               ((= sumv number) "perfect")  
+               ((> sumv number) "abundant")
+               ((< sumv number) "deficient")               
+               )))))
